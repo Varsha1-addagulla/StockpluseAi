@@ -77,21 +77,28 @@ def load_user(user_id):
 # --- Global Objects ---
 # In a real app, we'd load a pre-trained model. 
 # For this demo, we'll train on startup if not exists (or just train quickly).
-print("Initializing Model...")
-loader = DataLoader(ticker='MCD', start_date='2015-01-01', end_date='2025-01-01')
-# We need to fetch data to get the scaler and last data point
-try:
-    loader.fetch_data()
-    x_train, y_train, scaler = loader.preprocess_data(look_back=60)
-    predictor = StockPredictor(input_shape=(x_train.shape[1], 1))
-    predictor.train(x_train, y_train)
-    print("Model trained.")
-except Exception as e:
-    print(f"Error initializing model: {e}")
-    predictor = None
-    scaler = None
-
+# Global variables for lazy initialization
+predictor = None
+scaler = None
 notifier = Notifier()
+
+def get_predictor():
+    """Lazy initialization of the predictor model"""
+    global predictor, scaler
+    if predictor is None:
+        print("Initializing Model...")
+        loader = DataLoader(ticker='MCD', start_date='2015-01-01', end_date='2025-01-01')
+        try:
+            loader.fetch_data()
+            x_train, y_train, scaler = loader.preprocess_data(look_back=60)
+            predictor = StockPredictor(input_shape=(x_train.shape[1], 1))
+            predictor.train(x_train, y_train)
+            print("Model trained.")
+        except Exception as e:
+            print(f"Error initializing model: {e}")
+            predictor = None
+            scaler = None
+    return predictor, scaler
 
 # --- Routes ---
 @app.route("/")
