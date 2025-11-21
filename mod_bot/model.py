@@ -1,29 +1,17 @@
-from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import Ridge
 import numpy as np
 import joblib
 
 class StockPredictor:
     def __init__(self, input_shape=None):
-        # MLPRegressor is a Neural Network (Multi-layer Perceptron)
-        # Optimized to prevent overfitting:
-        # - early_stopping=True: Stops if validation score doesn't improve
-        # - alpha=0.01: L2 Regularization to penalize complex models
-        # - hidden_layer_sizes=(64, 32): Reduced capacity to force generalization
-        self.model = MLPRegressor(
-            hidden_layer_sizes=(64, 32), 
-            activation='relu', 
-            solver='adam', 
-            max_iter=500, 
-            alpha=0.01, 
-            early_stopping=True, 
-            validation_fraction=0.1,
-            random_state=42
-        )
+        # Ridge Regression: Fast, low memory, and effective for stock prediction
+        # alpha=1.0: L2 regularization to prevent overfitting
+        self.model = Ridge(alpha=1.0, random_state=42)
 
     def train(self, x_train, y_train, **kwargs):
         """Trains the model. x_train should be 2D: (samples, features*look_back)."""
-        print(f"Training MLPRegressor (Neural Network) on shape: {x_train.shape}")
-        self.model.fit(x_train, y_train)
+        print(f"Training Ridge Regression on shape: {x_train.shape}")
+        self.model.fit(x_train, y_train.ravel())
 
     def predict(self, x_test):
         """Makes predictions."""
