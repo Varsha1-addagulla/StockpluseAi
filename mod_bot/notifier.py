@@ -146,3 +146,66 @@ The StockPulse AI Team
             print(f"{reset_link}")
             print(f"Token expires in 15 minutes")
             print(f"{'='*60}\n")
+
+    def send_welcome_email(self, user_email, username):
+        """Send welcome email to new users"""
+        if not self.sender_email or not self.sender_password:
+            print("Warning: Email credentials not set. Skipping welcome email.")
+            return
+
+        subject = "🎉 Welcome to StockPulse AI!"
+        
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h1 style="color: #7000ff; text-align: center;">Welcome to StockPulse AI! 🚀</h1>
+                    
+                    <p>Hi <strong>{username}</strong>,</p>
+                    
+                    <p>Thank you for joining StockPulse AI! We're excited to have you on board.</p>
+                    
+                    <h2 style="color: #00d2ff;">What You Can Do:</h2>
+                    <ul>
+                        <li>📈 Analyze any stock with AI-powered predictions</li>
+                        <li>📊 View 7-day price forecasts</li>
+                        <li>💼 Manage your portfolio</li>
+                        <li>🔔 Get email alerts for price changes (enable in Settings)</li>
+                    </ul>
+                    
+                    <p style="margin-top: 30px;">
+                        <a href="https://stockpluseai.onrender.com/dashboard" 
+                           style="background-color: #7000ff; color: white; padding: 12px 30px; 
+                                  text-decoration: none; border-radius: 5px; display: inline-block;">
+                            Start Analyzing Stocks
+                        </a>
+                    </p>
+                    
+                    <p style="margin-top: 30px; color: #666; font-size: 14px;">
+                        Happy investing!<br>
+                        <strong>The StockPulse AI Team</strong>
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['From'] = self.sender_email
+            msg['To'] = user_email
+            msg['Subject'] = subject
+            
+            # Attach HTML version
+            msg.attach(MIMEText(html_body, 'html'))
+            
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+            server.starttls()
+            server.login(self.sender_email, self.sender_password)
+            server.sendmail(self.sender_email, user_email, msg.as_string())
+            server.quit()
+            
+            print(f"Welcome email sent to {user_email}")
+        except Exception as e:
+            print(f"Failed to send welcome email: {e}")
+
