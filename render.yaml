@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: stockpulse-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_PASSWORD
+        sync: false
+      - key: SMTP_SERVER
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+    databases:
+      - name: stockpulse-db
+        databaseName: stockpulse
+        user: stockpulse_user
+
+databases:
+  - name: stockpulse-db
+    databaseName: stockpulse
+    user: stockpulse_user
