@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mt-5">
+    <div class="col-md-10 mx-auto">
+        <div class="card p-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="h4 mb-0">My Portfolio</span>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                    <i class="fas fa-plus"></i> Add Stock
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover text-white align-middle">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Quantity</th>
+                                <th>Avg Price</th>
+                                <th>Action</th>
+                                <th>Forecast</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in portfolio %}
+                            <tr>
+                                <td class="fw-bold">{{ stock.ticker }}</td>
+                                <td>{{ stock.quantity }}</td>
+                                <td>${{ "%.2f"|format(stock.avg_price) }}</td>
+                                <td>
+                                    <a href="{{ url_for('delete_portfolio', id=stock.id) }}"
+                                        class="btn btn-sm btn-outline-danger" title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('dashboard', ticker=stock.ticker) }}"
+                                        class="btn btn-sm btn-success">
+                                        <i class="fas fa-chart-line me-1"></i> Analyze Health
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-folder-open fa-2x mb-3 d-block"></i>
+                                    No stocks in portfolio. Add one to get started!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Form Modal -->
+    <div class="modal fade" id="addStockModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Add to Portfolio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('add_portfolio') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Ticker Symbol</label>
+                            <input type="text" name="ticker" class="form-control" required placeholder="e.g. AAPL">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" name="quantity" class="form-control" required min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Average Buy Price</label>
+                            <input type="number" name="price" class="form-control" required step="0.01">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Add Stock</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

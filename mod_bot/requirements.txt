@@ -1,0 +1,13 @@
+yfinance
+pandas
+numpy
+scikit-learn
+matplotlib
+flask
+flask-sqlalchemy
+flask-login
+flask-bcrypt
+python-dotenv
+gunicorn
+textblob
+psycopg2-binary
