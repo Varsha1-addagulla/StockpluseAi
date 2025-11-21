@@ -123,6 +123,10 @@ def register():
         user = User(username=username, email=email, phone_number=phone, password=hashed_password)
         db.session.add(user)
         db.session.commit()
+        
+        # Send welcome email
+        notifier.send_welcome_email(email, username)
+        
         flash('Your account has been created! You can now log in', 'success')
         return redirect(url_for('login'))
         
@@ -387,10 +391,14 @@ def dashboard():
         trend = "HOLD"
         if predicted_price > current_price * 1.01:
             trend = "UP"
-            notifier.notify_increase(current_user.email, ticker, current_price, predicted_price)
+            # Only send email if user has enabled email notifications
+            if current_user.notify_email:
+                notifier.notify_increase(current_user.email, ticker, current_price, predicted_price)
         elif predicted_price < current_price * 0.99:
             trend = "DOWN"
-            notifier.notify_decrease(current_user.email, ticker, current_price, predicted_price)
+            # Only send email if user has enabled email notifications
+            if current_user.notify_email:
+                notifier.notify_decrease(current_user.email, ticker, current_price, predicted_price)
 
         # Generate Plot
         real_prices = current_loader.data['Close'].values.flatten() # Ensure 1D
