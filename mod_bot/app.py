@@ -482,10 +482,15 @@ if __name__ == '__main__':
         from sqlalchemy import text
         try:
             with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE user ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
-                conn.execute(text("ALTER TABLE user ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
                 print("Added notification columns to User table.")
-        except Exception as e:
-            # Columns likely already exist
+        except Exception:
+            # Columns likely already exist; ignore
             pass
-    app.run(debug=True)
+
+    # Use PORT env var so local run matches Render behavior
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+
+
