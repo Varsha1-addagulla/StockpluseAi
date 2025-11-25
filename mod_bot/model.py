@@ -1,6 +1,7 @@
 from sklearn.linear_model import Ridge
 import numpy as np
 import joblib
+import os
 
 class StockPredictor:
     def __init__(self, input_shape=None):
@@ -12,6 +13,22 @@ class StockPredictor:
         """Trains the model. x_train should be 2D: (samples, features*look_back)."""
         print(f"Training Ridge Regression on shape: {x_train.shape}")
         self.model.fit(x_train, y_train.ravel())
+
+    def save(self, filepath):
+        """Save the trained model to disk using joblib."""
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        joblib.dump(self.model, filepath)
+        print(f"Model saved to {filepath}")
+
+    def load(self, filepath):
+        """Load a trained model from disk using joblib."""
+        if os.path.exists(filepath):
+            self.model = joblib.load(filepath)
+            print(f"Model loaded from {filepath}")
+            return True
+        else:
+            print(f"Model file not found: {filepath}")
+            return False
 
     def predict(self, x_test):
         """Makes predictions."""
@@ -57,3 +74,4 @@ class StockPredictor:
             current_sequence = np.concatenate((current_sequence[num_features:], last_step_features))
 
         return np.array(predictions).reshape(-1, 1)
+
