@@ -119,6 +119,18 @@ def register():
         phone = request.form.get('phone') # Get phone number
         password = request.form.get('password')
         
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already taken. Please choose a different username.', 'danger')
+            return render_template('register.html')
+        
+        # Check if email already exists
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            flash('Email already registered. Please use a different email or login.', 'danger')
+            return render_template('register.html')
+        
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
         user = User(username=username, email=email, phone_number=phone, password=hashed_password)
         db.session.add(user)
@@ -323,9 +335,15 @@ def dashboard():
 
         x_train, y_train, current_scaler = current_loader.preprocess_data(look_back=60)
         
-        # Re-train model on this specific range (RandomForest is fast)
+        # Load pre-trained model from disk (MUCH faster than training)
         current_predictor = StockPredictor(input_shape=(x_train.shape[1], 1))
-        current_predictor.train(x_train, y_train)
+        model_path = os.path.join('models', 'predictor.joblib')
+        
+        # Try to load pre-trained model, fallback to training if not found
+        if not current_predictor.load(model_path):
+            print(f"Pre-trained model not found. Training new model for {ticker}...")
+            current_predictor.train(x_train, y_train)
+
         
         # Get latest data point for prediction
         feature_cols = ['Close', 'SMA_20', 'SMA_50', 'RSI_14', 'MACD_12_26_9', 'Volatility', 'Market_Return', 'Volume_Change']
@@ -482,15 +500,11 @@ if __name__ == '__main__':
         from sqlalchemy import text
         try:
             with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
-                conn.execute(text("ALTER TABLE \"user\" ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE user ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE user ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
                 print("Added notification columns to User table.")
-        except Exception:
-            # Columns likely already exist; ignore
+        except Exception as e:
+            # Columns likely already exist
             pass
-
-    # Use PORT env var so local run matches Render behavior
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
-
+    app.run(debug=True)
 
