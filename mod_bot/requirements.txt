@@ -11,3 +11,4 @@ python-dotenv
 gunicorn
 textblob
 psycopg2-binary
+sendgrid
