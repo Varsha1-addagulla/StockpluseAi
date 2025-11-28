@@ -486,12 +486,43 @@ def dashboard():
         plot_url = base64.b64encode(img.getvalue()).decode()
         plt.close()
 
+    except IndexError as e:
+        # Specific error for insufficient data
+        print(f"IndexError in dashboard: {e}")
+        flash(f'⚠️ Not enough data for {ticker}. Please select a date range of at least 2 years for accurate predictions.', 'warning')
+        return render_template('dashboard.html', price=0, prediction=0, trend="Error",
+                               start_date=start_date, end_date=end_date, ticker=ticker, plot_url=None,
+                               username=current_user.username, sentiment_label="Neutral", sentiment_score=0,
+                               rsi=0, macd=0, sma=0, confidence=0, forecast_dates=[], forecast_prices=[])
+    
+    except ValueError as e:
+        # Specific error for invalid ticker or data issues
+        print(f"ValueError in dashboard: {e}")
+        if "ticker" in str(e).lower() or "symbol" in str(e).lower():
+            flash(f'❌ Invalid stock ticker "{ticker}". Please check the ticker symbol and try again.', 'danger')
+        else:
+            flash(f'⚠️ Data processing error for {ticker}. Try a different date range or ticker.', 'warning')
+        return render_template('dashboard.html', price=0, prediction=0, trend="Error",
+                               start_date=start_date, end_date=end_date, ticker=ticker, plot_url=None,
+                               username=current_user.username, sentiment_label="Neutral", sentiment_score=0,
+                               rsi=0, macd=0, sma=0, confidence=0, forecast_dates=[], forecast_prices=[])
+    
     except Exception as e:
+        # Generic error with helpful message
         import traceback
         error_trace = traceback.format_exc()
         print(f"Error in dashboard: {e}")
         print(f"Full traceback:\n{error_trace}")
-        flash(f"Error analyzing data: {e}", "danger")
+        
+        # Provide user-friendly error message
+        error_msg = str(e)
+        if "tuple index out of range" in error_msg or "index" in error_msg.lower():
+            flash(f'⚠️ Insufficient data for {ticker}. Please select a longer date range (at least 2 years).', 'warning')
+        elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+            flash(f'🌐 Network error. Please check your internet connection and try again.', 'danger')
+        else:
+            flash(f'❌ Unable to analyze {ticker}. Please try a different stock or date range.', 'danger')
+        
         return render_template('dashboard.html', price=0, prediction=0, trend="Error",
                                start_date=start_date, end_date=end_date, ticker=ticker, plot_url=None,
                                username=current_user.username, sentiment_label="Neutral", sentiment_score=0,
