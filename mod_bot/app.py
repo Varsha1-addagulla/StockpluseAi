@@ -313,8 +313,27 @@ def dashboard():
     
     if request.method == 'POST':
         ticker = request.form.get('ticker').upper()
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
+        form_start = request.form.get('start_date')
+        form_end = request.form.get('end_date')
+        
+        # Validate date range - need at least 2 years of data
+        if form_start and form_end:
+            start_dt = datetime.strptime(form_start, '%Y-%m-%d')
+            end_dt = datetime.strptime(form_end, '%Y-%m-%d')
+            days_diff = (end_dt - start_dt).days
+            
+            if days_diff < 730:  # Less than 2 years
+                flash('Please select a date range of at least 2 years for accurate predictions.', 'warning')
+                # Use default 2-year range
+                start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            else:
+                start_date = form_start
+                end_date = form_end
+        else:
+            # If dates not provided, use defaults
+            start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y-%m-%d')
     elif request.args.get('ticker'): # Allow GET request for "Analyze" button from portfolio
         ticker = request.args.get('ticker').upper()
 
