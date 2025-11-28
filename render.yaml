@@ -3,7 +3,8 @@ services:
     name: stockpulse-ai
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt && python init_db.py
+    rootDirectory: mod_bot
+    buildCommand: pip install -r requirements.txt && python init_db.py && python train_and_save.py
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
@@ -20,4 +21,5 @@ databases:
     databaseName: stockpulse
     user: stockpulse_user
     plan: free
+
 
