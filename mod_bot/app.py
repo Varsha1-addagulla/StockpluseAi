@@ -131,13 +131,23 @@ def register():
             flash('Email already registered. Please use a different email or login.', 'danger')
             return render_template('register.html')
         
+        # Check if phone number already exists
+        if phone:  # Only check if phone number was provided
+            existing_phone = User.query.filter_by(phone_number=phone).first()
+            if existing_phone:
+                flash('Phone number already registered. Please use a different phone number.', 'danger')
+                return render_template('register.html')
+        
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
         user = User(username=username, email=email, phone_number=phone, password=hashed_password)
         db.session.add(user)
         db.session.commit()
         
-        # Send welcome email
-        notifier.send_welcome_email(email, username)
+        # Send welcome email (skip if no email credentials)
+        try:
+            notifier.send_welcome_email(email, username)
+        except Exception as e:
+            print(f"Failed to send welcome email: {e}")
         
         flash('Your account has been created! You can now log in', 'success')
         return redirect(url_for('login'))
@@ -493,6 +503,40 @@ def dashboard():
 
     return render_template('dashboard.html', **template_data)
 
+@app.route("/test-email")
+def test_email():
+    """Test endpoint to verify SendGrid email sending."""
+    to_email = request.args.get('to')
+    
+    if not to_email:
+        return {"error": "Missing 'to' parameter. Usage: /test-email?to=email@example.com"}, 400
+    
+    # Send test email
+    subject = "🧪 StockPulse AI - Test Email"
+    html_content = """
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="color: #7000ff;">✅ Email Test Successful!</h2>
+        <p>If you're reading this, SendGrid email integration is working correctly.</p>
+        <p><strong>StockPulse AI</strong> is ready to send notifications!</p>
+    </body>
+    </html>
+    """
+    
+    success = notifier.send_email(to_email, subject, html_content)
+    
+    if success:
+        return {
+            "status": "success",
+            "message": f"Test email sent to {to_email}",
+            "check": "Please check your inbox (and spam folder)"
+        }, 200
+    else:
+        return {
+            "status": "error",
+            "message": "Failed to send email. Check SENDGRID_API_KEY and FROM_EMAIL environment variables."
+        }, 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -507,4 +551,3 @@ if __name__ == '__main__':
             # Columns likely already exist
             pass
     app.run(debug=True)
-
