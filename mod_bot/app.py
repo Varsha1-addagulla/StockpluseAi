@@ -377,8 +377,14 @@ def dashboard():
             print(f"Serving {ticker} from cache.")
             return render_template('dashboard.html', **cached_data)
 
-    # Initialize loader with selected dates and ticker
-    current_loader = DataLoader(ticker=ticker, start_date=start_date, end_date=end_date)
+    # Initialize loader with BUFFERED dates for calculation
+    # We need extra data (at least 60-90 days) for:
+    # 1. Technical Indicators (SMA_50 needs 50 days)
+    # 2. Model Lookback (needs 60 days)
+    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+    fetch_start_date = (start_dt - timedelta(days=90)).strftime('%Y-%m-%d')
+    
+    current_loader = DataLoader(ticker=ticker, start_date=fetch_start_date, end_date=end_date)
     
     try:
         current_loader.fetch_data()
@@ -480,8 +486,16 @@ def dashboard():
                 notifier.notify_decrease(current_user.email, ticker, current_price, predicted_price)
 
         # Generate Plot
-        real_prices = current_loader.data['Close'].values.flatten() # Ensure 1D
-        dates = current_loader.data.index.strftime('%Y-%m-%d').tolist()
+        # Filter data to show ONLY the user-selected range
+        mask = (current_loader.data.index >= start_date) & (current_loader.data.index <= end_date)
+        display_data = current_loader.data.loc[mask]
+        
+        if display_data.empty:
+             # Fallback if mask is empty (shouldn't happen with 90d buffer, but safety first)
+             display_data = current_loader.data.iloc[-30:] 
+        
+        real_prices = display_data['Close'].values.flatten() # Ensure 1D
+        dates = display_data.index.strftime('%Y-%m-%d').tolist()
         
         plt.figure(figsize=(10, 5))
         
