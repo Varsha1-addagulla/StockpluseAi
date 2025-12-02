@@ -308,30 +308,62 @@ def settings():
 def dashboard():
     # Default values
     ticker = 'MCD'
-    start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d') # 2 years
+    start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d') # 2 years default
     end_date = datetime.now().strftime('%Y-%m-%d')
     
     if request.method == 'POST':
         ticker = request.form.get('ticker').upper()
         form_start = request.form.get('start_date')
         form_end = request.form.get('end_date')
+        quick_range = request.form.get('quick_range')  # New: quick select option
         
-        # Validate date range - need at least 2 years of data
-        if form_start and form_end:
+        # Handle quick range selection
+        if quick_range:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            if quick_range == '1m':
+                start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            elif quick_range == '3m':
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            elif quick_range == '6m':
+                start_date = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
+            elif quick_range == '1y':
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            elif quick_range == '2y':
+                start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+            elif quick_range == '5y':
+                start_date = (datetime.now() - timedelta(days=1825)).strftime('%Y-%m-%d')
+        # Smart auto-fill: if only one date is provided
+        elif form_start and not form_end:
+            # User provided start date only → use today as end date
+            start_date = form_start
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        elif form_end and not form_start:
+            # User provided end date only → calculate start date (2 years before)
+            end_date = form_end
+            end_dt = datetime.strptime(form_end, '%Y-%m-%d')
+            start_date = (end_dt - timedelta(days=730)).strftime('%Y-%m-%d')
+        elif form_start and form_end:
+            # Both dates provided → validate
             start_dt = datetime.strptime(form_start, '%Y-%m-%d')
             end_dt = datetime.strptime(form_end, '%Y-%m-%d')
             days_diff = (end_dt - start_dt).days
             
-            if days_diff < 730:  # Less than 2 years
-                flash('Please select a date range of at least 2 years for accurate predictions.', 'warning')
-                # Use default 2-year range
-                start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+            # Minimum 30 days (1 month) required
+            if days_diff < 30:
+                flash('⚠️ Date range too short. Minimum 30 days required. Using 1 month range.', 'warning')
+                start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
                 end_date = datetime.now().strftime('%Y-%m-%d')
+            # Warning if less than 2 years (but still allow it)
+            elif days_diff < 730:
+                flash('💡 For best predictions, we recommend at least 2 years of data. Short-term analysis may be less accurate.', 'info')
+                start_date = form_start
+                end_date = form_end
             else:
+                # Good range (2+ years)
                 start_date = form_start
                 end_date = form_end
         else:
-            # If dates not provided, use defaults
+            # No dates provided, use defaults
             start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
     elif request.args.get('ticker'): # Allow GET request for "Analyze" button from portfolio
@@ -569,35 +601,3 @@ def test_email():
         <h2 style="color: #7000ff;">✅ Email Test Successful!</h2>
         <p>If you're reading this, SendGrid email integration is working correctly.</p>
         <p><strong>StockPulse AI</strong> is ready to send notifications!</p>
-    </body>
-    </html>
-    """
-    
-    success = notifier.send_email(to_email, subject, html_content)
-    
-    if success:
-        return {
-            "status": "success",
-            "message": f"Test email sent to {to_email}",
-            "check": "Please check your inbox (and spam folder)"
-        }, 200
-    else:
-        return {
-            "status": "error",
-            "message": "Failed to send email. Check SENDGRID_API_KEY and FROM_EMAIL environment variables."
-        }, 500
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        # Migration: Add new columns if they don't exist
-        from sqlalchemy import text
-        try:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE user ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
-                conn.execute(text("ALTER TABLE user ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
-                print("Added notification columns to User table.")
-        except Exception as e:
-            # Columns likely already exist
-            pass
-    app.run(debug=True)
