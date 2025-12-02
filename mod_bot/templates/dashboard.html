@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+% extends "base.html" %}
 {% block content %}
 <div class="text-center mb-5">
     <h1 class="display-4 fw-bold">Welcome, <span class="text-gradient">{{ username }}</span></h1>
@@ -22,31 +22,6 @@
                         <option value="AMZN">Amazon</option>
                         <option value="GOOGL">Google</option>
                         <option value="META">Meta</option>
-                        <option value="NFLX">Netflix</option>
-                        <option value="AMD">AMD</option>
-                        <option value="BTC-USD">Bitcoin</option>
-                        <option value="ETH-USD">Ethereum</option>
-                    </datalist>
-                </div>
-                <div class="text-start">
-                    <label class="form-label text-muted small">Start Date</label>
-                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}" required>
-                </div>
-                <div class="text-start">
-                    <label class="form-label text-muted small">End Date</label>
-                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Analyze</button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <!-- Current Price Card -->
-    <div class="col-md-3">
-        <div class="card h-100 text-center p-4">
-            <div class="card-header">Current Price <i class="fas fa-info-circle ms-1 small" data-bs-toggle="tooltip"
                     data-bs-placement="top"
                     title="The latest closing price of the stock from the most recent trading day"></i></div>
             <div class="card-body d-flex flex-column justify-content-center">
