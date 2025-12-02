@@ -16,9 +16,11 @@ from datetime import datetime, timedelta
 import time
 import secrets
 
-# Global Cache
+# Global Cache (optimized for low memory)
 CACHE = {}
-CACHE_EXPIRY = 300 # 5 minutes
+CACHE_EXPIRY = 60  # 1 minute (reduced from 5 to save memory)
+MAX_CACHE_SIZE = 10  # Limit cache entries
+MAX_DATE_RANGE_DAYS = 730  # 2 years maximum
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here' # Change this in production
@@ -377,12 +379,20 @@ def dashboard():
             print(f"Serving {ticker} from cache.")
             return render_template('dashboard.html', **cached_data)
 
-    # Initialize loader with BUFFERED dates for calculation
-    # We need extra data (at least 60-90 days) for:
-    # 1. Technical Indicators (SMA_50 needs 50 days)
-    # 2. Model Lookback (needs 60 days)
+    # Validate date range (prevent memory issues)
     start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-    fetch_start_date = (start_dt - timedelta(days=90)).strftime('%Y-%m-%d')
+    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+    days_range = (end_dt - start_dt).days
+    
+    if days_range > MAX_DATE_RANGE_DAYS:
+        flash(f'⚠️ Maximum allowed range is {MAX_DATE_RANGE_DAYS//365} years. Using last 2 years.', 'warning')
+        start_dt = end_dt - timedelta(days=MAX_DATE_RANGE_DAYS)
+        start_date = start_dt.strftime('%Y-%m-%d')
+    
+    # Initialize loader with BUFFERED dates for calculation
+    # Reduced buffer from 90 to 60 days to save memory
+    BUFFER_DAYS = 60
+    fetch_start_date = (start_dt - timedelta(days=BUFFER_DAYS)).strftime('%Y-%m-%d')
     
     current_loader = DataLoader(ticker=ticker, start_date=fetch_start_date, end_date=end_date)
     
@@ -594,8 +604,19 @@ def dashboard():
         'forecast_prices': [round(float(p), 2) for p in future_predictions]
     }
     
-    # Store in Cache
+    # Store in Cache (with size limit)
+    if len(CACHE) >= MAX_CACHE_SIZE:
+        # Remove oldest entry
+        oldest_key = min(CACHE.keys(), key=lambda k: CACHE[k][0])
+        CACHE.pop(oldest_key, None)
+    
     CACHE[cache_key] = (time.time(), template_data)
+    
+    # Explicit memory cleanup
+    import gc
+    del current_loader, last_60_features, future_predictions
+    plt.close('all')  # Close all matplotlib figures
+    gc.collect()  # Force garbage collection
 
     return render_template('dashboard.html', **template_data)
 
