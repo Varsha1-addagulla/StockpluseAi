@@ -601,3 +601,35 @@ def test_email():
         <h2 style="color: #7000ff;">✅ Email Test Successful!</h2>
         <p>If you're reading this, SendGrid email integration is working correctly.</p>
         <p><strong>StockPulse AI</strong> is ready to send notifications!</p>
+    </body>
+    </html>
+    """
+    
+    success = notifier.send_email(to_email, subject, html_content)
+    
+    if success:
+        return {
+            "status": "success",
+            "message": f"Test email sent to {to_email}",
+            "check": "Please check your inbox (and spam folder)"
+        }, 200
+    else:
+        return {
+            "status": "error",
+            "message": "Failed to send email. Check SENDGRID_API_KEY and FROM_EMAIL environment variables."
+        }, 500
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        # Migration: Add new columns if they don't exist
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE user ADD COLUMN notify_sms BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE user ADD COLUMN notify_email BOOLEAN DEFAULT 0"))
+                print("Added notification columns to User table.")
+        except Exception as e:
+            # Columns likely already exist
+            pass
+    app.run(debug=True)
