@@ -3,7 +3,7 @@ services:
     name: stockpulse-ai
     env: python
     plan: free
-    rootDir: .
+    rootDir: mod_bot
     buildCommand: pip install -r requirements.txt && mkdir -p models && python -c "from app import app, db; app.app_context().push(); db.create_all(); print('Database initialized')"
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
@@ -21,6 +21,7 @@ databases:
     databaseName: stockpulse
     user: stockpulse_user
     plan: free
+
 
 
 
