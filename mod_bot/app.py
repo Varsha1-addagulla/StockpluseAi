@@ -16,11 +16,12 @@ from datetime import datetime, timedelta
 import time
 import secrets
 
-# Global Cache (optimized for low memory)
+# Global Cache (AGGRESSIVELY optimized for low memory)
 CACHE = {}
-CACHE_EXPIRY = 60  # 1 minute (reduced from 5 to save memory)
-MAX_CACHE_SIZE = 10  # Limit cache entries
-MAX_DATE_RANGE_DAYS = 730  # 2 years maximum
+CACHE_EXPIRY = 45  # 45 seconds (further reduced)
+MAX_CACHE_SIZE = 5  # Reduced to 5 entries max
+MAX_DATE_RANGE_DAYS = 365  # 1 year maximum (reduced from 2)
+BUFFER_DAYS = 50  # Reduced from 60
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here' # Change this in production
@@ -390,8 +391,7 @@ def dashboard():
         start_date = start_dt.strftime('%Y-%m-%d')
     
     # Initialize loader with BUFFERED dates for calculation
-    # Reduced buffer from 90 to 60 days to save memory
-    BUFFER_DAYS = 60
+    # Using global BUFFER_DAYS constant (50 days)
     fetch_start_date = (start_dt - timedelta(days=BUFFER_DAYS)).strftime('%Y-%m-%d')
     
     current_loader = DataLoader(ticker=ticker, start_date=fetch_start_date, end_date=end_date)
@@ -482,17 +482,22 @@ def dashboard():
         latest_macd = current_loader.data['MACD_12_26_9'].iloc[-1]
         latest_sma20 = current_loader.data['SMA_20'].iloc[-1]
 
-        # Determine Trend
+        # Determine Trend & Send Alerts
+        # We only trigger alerts if:
+        # 1. The price change is significant (> 1%)
+        # 2. The AI Confidence Score is high (> 75%) - Prevents "fake" triggers
         trend = "HOLD"
+        
         if predicted_price > current_price * 1.01:
             trend = "UP"
-            # Only send email if user has enabled email notifications
-            if current_user.notify_email:
+            if current_user.notify_email and confidence_score > 75:
+                print(f"🚀 High confidence ({confidence_score}%) buy signal for {ticker}. Sending email...")
                 notifier.notify_increase(current_user.email, ticker, current_price, predicted_price)
+                
         elif predicted_price < current_price * 0.99:
             trend = "DOWN"
-            # Only send email if user has enabled email notifications
-            if current_user.notify_email:
+            if current_user.notify_email and confidence_score > 75:
+                print(f"⚠️ High confidence ({confidence_score}%) sell signal for {ticker}. Sending email...")
                 notifier.notify_decrease(current_user.email, ticker, current_price, predicted_price)
 
         # Generate Plot
@@ -604,13 +609,16 @@ def dashboard():
         'forecast_prices': [round(float(p), 2) for p in future_predictions]
     }
     
-    # Store in Cache (with size limit)
-    if len(CACHE) >= MAX_CACHE_SIZE:
-        # Remove oldest entry
-        oldest_key = min(CACHE.keys(), key=lambda k: CACHE[k][0])
-        CACHE.pop(oldest_key, None)
+    # Store in Cache (with size limit) - Skip caching for large date ranges
+    days_in_range = (datetime.strptime(end_date, '%Y-%m-%d') - datetime.strptime(start_date, '%Y-%m-%d')).days
     
-    CACHE[cache_key] = (time.time(), template_data)
+    if days_in_range <= 180:  # Only cache ranges <= 6 months
+        if len(CACHE) >= MAX_CACHE_SIZE:
+            # Remove oldest entry
+            oldest_key = min(CACHE.keys(), key=lambda k: CACHE[k][0])
+            CACHE.pop(oldest_key, None)
+        
+        CACHE[cache_key] = (time.time(), template_data)
     
     # Explicit memory cleanup
     import gc
